@@ -56,6 +56,8 @@ module Ansi =
     type Style =
     | Bold
     | Italics
+    | Underline
+    | Centered
 
     [<RequireQualifiedAccess>]
     type StandardColor =

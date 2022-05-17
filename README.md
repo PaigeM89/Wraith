@@ -1,6 +1,10 @@
 # Wraith
 
-[Enter useful description for Wraith]
+Resources: 
+
+https://github.com/david-von-tamar/ansi-term/blob/master/Tamar.ANSITerm/Console.cs
+
+https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
 
 ---
 

@@ -2,16 +2,38 @@
 open Wraith.Ansi
 open Wraith.Ansi.Operators
 
-//let name = Console.prompt (!! "Enter name: ")
-
-// let msg =
-//     !! $"Hello world from F#"
-//     |> Message.withColor StandardColor.Red
-
-// Console.writeLine msg
-
 open System
-let private width = System.Console.BufferWidth
-let private height = System.Console.BufferHeight
+open System.Threading
+open System.Threading.Tasks
 
-printfn $"height x width: %i{height} x %i{width}"
+let runTaskU (t: Task) = t |> Async.AwaitTask |> Async.RunSynchronously
+let runTask (t : Task<'a>) = t |> Async.AwaitTask |> Async.RunSynchronously
+
+[<Literal>]
+let escape = '\u001B'
+
+let startUnderline = $"%c{escape}[04m"
+
+let endUnderline = $"%c{escape}[24m"
+
+// have to escape, then unescape.
+let underline text = $"%s{startUnderline}%s{text}%s{endUnderline}"
+
+let windowHeight = System.Console.WindowHeight
+let windowWidth = System.Console.WindowWidth
+
+let reader = System.Console.In
+let writer = System.Console.Out
+
+writer.WriteAsync "Enter name: " |> runTaskU
+
+let name = reader.ReadLine()
+
+Console.Clear()
+
+System.Console.WriteLine $"Name is \"%s{underline name}\""
+
+let colorTerm = Environment.GetEnvironmentVariable("COLORTERM")
+let term = Environment.GetEnvironmentVariable("TERM")
+
+printfn $"Term, colorterm: %A{term}, %A{colorTerm}"
