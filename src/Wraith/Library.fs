@@ -52,6 +52,9 @@ module Say =
 
 module Ansi =
 
+    [<Literal>]
+    let escape = '\u001B'
+
     [<RequireQualifiedAccess>]
     type Style =
     | Bold
@@ -78,6 +81,9 @@ module Ansi =
     | Cyan
     | White
 
+    // this actually isn't useful because it's hard to capture a concept where only part of the text
+    // has special formatting
+    // this would require each layer be a list, which gets unwieldy, both to implement and to actually use
     type Message =
     | Text of msg: string
     | ColoredMessage of msg: Message * textColor : StandardColor
@@ -89,48 +95,70 @@ module Ansi =
         let withColor color msg = ColoredMessage(msg, color)
         let withStyle style msg = StyledMessage(msg, style)
 
+        let underline msg = StyledMessage(msg, Style.Underline)
+
     module Operators =
         let (!!) t = Text t
 
 module Console =
     open Ansi
+    open System.Threading.Tasks
 
-    let private width = System.Console.BufferWidth
-    let private height = System.Console.BufferHeight
+    [<RequireQualifiedAccess>]
+    module private EscapedWrites =
+        let startUnderline = $"%c{escape}[04m"
+        let endUnderline = $"%c{escape}[24m"
 
-    let s = Console.OpenStandardOutput()
-    let tw = new IO.StringWriter()
+        let underline text = $"%s{startUnderline}%s{text}%s{endUnderline}"
 
-    let writeLine (msg : Message) =
-        let rec traverse m =
-            match m with
-            | Text t ->
-                //Console.WriteLine t
-                let sb = tw.GetStringBuilder()
-                sb.Append t |> ignore
-                tw.WriteLine()
-                tw.Flush()
-            | ColoredMessage (m, c) ->
-                Console.ForegroundColor <- (ConsoleColor.Red)
-                traverse m
-            | StyledMessage (m, s) ->
-                traverse m
-        traverse msg
+    module Format =
+        let underline = EscapedWrites.underline
 
-    let write (msg : Message) =
-        let rec traverse m =
-            match m with
-            | Text t ->
-                Console.Write t
-            | ColoredMessage (m, c) ->
-                Console.ForegroundColor <- (ConsoleColor.Red)
-                traverse m
-            | StyledMessage (m, s) ->
-                traverse m
-        traverse msg
+    let runTaskU (t: Task) = t |> Async.AwaitTask |> Async.RunSynchronously
+    let runTask (t : Task<'a>) = t |> Async.AwaitTask |> Async.RunSynchronously
 
-    let private readLine() = Console.ReadLine()
+    let reader = System.Console.In
+    let writer = System.Console.Out
 
-    let prompt msg =
-        write msg
-        readLine()
+    let textPrompt (text : string) =
+        writer.WriteAsync text
+        |> runTaskU
+        reader.ReadLine()
+
+    let clear() = Console.Clear()
+    let writeMessage (msg : Message) =
+        let rec traverse rem prefix postfix =
+            match rem with
+            | Text t -> $"%s{prefix}%s{t}%s{postfix}"
+            // ignore colors for now
+            | ColoredMessage (msg, color) -> traverse msg prefix postfix
+            | StyledMessage(msg, style) ->
+                match style with
+                | Style.Underline ->
+                    traverse msg (prefix + EscapedWrites.startUnderline) (EscapedWrites.endUnderline + postfix)
+                | _ -> traverse msg prefix postfix
+        let escapedString = traverse msg "" ""
+        Console.WriteLine escapedString
+    let writeLine (text: string) = Console.WriteLine text
+
+    module Prompts =
+        let textPrompt (text : string) =
+            writer.WriteAsync text
+            |> runTaskU
+            reader.ReadLine()
+
+    type ConsoleBuilder() =
+        member _.Yield _ = ""
+
+        member this.Bind(state, func) = func state
+
+        [<CustomOperation("clear")>]
+        member _.Clear (_, ()) =
+            System.Console.Clear()
+
+        [<CustomOperation("display")>]
+        member _.Display((), text) =
+            writeLine text
+            ()
+
+    let console = ConsoleBuilder()
