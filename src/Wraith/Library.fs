@@ -142,13 +142,72 @@ module Console =
     let writeLine (text: string) = Console.WriteLine text
 
     module Prompts =
-        let textPrompt (text : string) =
-            writer.WriteAsync text
-            |> runTaskU
-            reader.ReadLine()
+        type TextPromptConfig = {
+            Prompt: string
+            OnError: string option
+            LoopOnEmpty: bool
+        } with
+            static member Default = {
+                Prompt = ""
+                OnError = None
+                LoopOnEmpty = false
+            }
+
+            static member FromPrompt prompt = {
+                TextPromptConfig.Default with Prompt = prompt
+            }
+
+        type TextPromptBuilder() =
+            member _.Yield _ = TextPromptConfig.Default
+
+            [<CustomOperation("prompt")>]
+            member this.Prompt(state, prompt) = { state with Prompt = prompt }
+            [<CustomOperation("loop_on_empty")>]
+            member this.LoopOnEmpty(state) = { state with LoopOnEmpty = true }
+            [<CustomOperation("empty_message")>]
+            member this.EmptyMessage(state, errMsg) = { state with OnError = Some errMsg }
+
+            [<CustomOperation("execute")>]
+            member this.Execute (config) =
+                if config.LoopOnEmpty then
+                    let rec loop input =
+                        if String.IsNullOrWhiteSpace input then
+                            // todo: this shouldn't print on first execute
+                            match config.OnError with
+                            | Some errMsg ->
+                                writer.WriteAsync $"{errMsg}\n" |> runTaskU
+                                writer.WriteAsync config.Prompt |> runTaskU
+                                reader.ReadLine() |> loop
+                            | None ->
+                                writer.WriteAsync config.Prompt |> runTaskU
+                                reader.ReadLine() |> loop
+                        else
+                            input
+                    loop ""
+                else
+                    writer.WriteAsync config.Prompt |> runTaskU
+                    reader.ReadLine()
+
+        let textPrompter = TextPromptBuilder()
+
+        let execute (config: TextPromptConfig) =
+            if config.LoopOnEmpty then
+                let rec loop input =
+                    if String.IsNullOrWhiteSpace input then
+                        writer.WriteAsync "Please enter a value\n" |> runTaskU
+                        writer.WriteAsync config.Prompt |> runTaskU
+                        reader.ReadLine() |> loop
+                    else
+                        input
+                loop ""
+            else
+                writer.WriteAsync config.Prompt |> runTaskU
+                reader.ReadLine()
+
+        let textPrompt prompt = TextPromptConfig.FromPrompt prompt |> execute
 
     type ConsoleBuilder() =
-        member _.Yield _ = ""
+        member _.Yield _ = ()
 
         member this.Bind(state, func) = func state
 
@@ -157,8 +216,10 @@ module Console =
             System.Console.Clear()
 
         [<CustomOperation("display")>]
-        member _.Display((), text) =
+        member _.Display(_, text) =
             writeLine text
             ()
 
     let console = ConsoleBuilder()
+
+

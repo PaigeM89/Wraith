@@ -3,38 +3,6 @@ open Wraith.Ansi
 open Wraith.Ansi.Operators
 
 open System
-open System.Threading
-open System.Threading.Tasks
-
-let runTaskU (t: Task) = t |> Async.AwaitTask |> Async.RunSynchronously
-let runTask (t : Task<'a>) = t |> Async.AwaitTask |> Async.RunSynchronously
-
-// [<Literal>]
-// let escape = '\u001B'
-
-let startUnderline = $"%c{escape}[04m"
-
-let endUnderline = $"%c{escape}[24m"
-
-// have to escape, then unescape.
-let underline text = $"%s{startUnderline}%s{text}%s{endUnderline}"
-
-let windowHeight = System.Console.WindowHeight
-let windowWidth = System.Console.WindowWidth
-
-let reader = System.Console.In
-let writer = System.Console.Out
-
-let textPrompt (text : string) =
-    writer.WriteAsync text
-    |> runTaskU
-    reader.ReadLine()
-
-let name = textPrompt "Enter name: "
-
-Console.Clear()
-
-System.Console.WriteLine $"Name is \"%s{underline name}\""
 
 let colorTerm = Environment.GetEnvironmentVariable("COLORTERM")
 let term = Environment.GetEnvironmentVariable("TERM")
@@ -43,18 +11,46 @@ printfn $"Term, colorterm: %A{term}, %A{colorTerm}"
 
 open Wraith.Console
 
-type ConsoleState = {
-    Name : string
-    Age : int
-} with
-    static member Default = {
-        Name = ""
-        Age = 0
+let name =
+    Prompts.textPrompter {
+        prompt "Enter name: "
+        empty_message "Please enter a valid name"
+        loop_on_empty
+        execute
     }
+    //|> Prompts.execute
+
+clear()
+
+writeLine $"Your name is %s{Format.underline name}"
+
+// type ConsoleState = {
+//     Name : string
+//     Age : int
+// } with
+//     static member Default = {
+//         Name = ""
+//         Age = 0
+//     }
 
 
-console {
-    let name = Prompts.textPrompt "Enter name: "
-    clear()
-    display $"Name is \"%s{underline name}\""
-}
+// console {
+//     let name = Prompts.textPrompt "Enter name: "
+//     let test = "hello world"
+//     //clear()
+//     display test
+//     display $"Name is \"%s{Format.underline name}\""
+// }
+
+// type TestBuilder() =
+//     member _.Yield _ = ""
+//     [<CustomOperation("print")>]
+//     member _.Print(text) = printfn "%s" text
+//     member _.Bind(text, f) = text + " " + (f text)
+
+// let test = TestBuilder()
+
+// test {
+//     let! innerVariable = "hello world"
+//     print // the value 'variable' is not defined
+// }
