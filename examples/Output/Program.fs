@@ -14,15 +14,32 @@ open Wraith.Console
 let name =
     Prompts.textPrompter {
         prompt "Enter name: "
-        empty_message "Please enter a valid name"
+        on_empty_message "Please enter a valid name"
         loop_on_empty
+        clear_on_loop
         execute
     }
-    //|> Prompts.execute
+
+let age =
+    Prompts.intPrompter {
+        prompt "Enter age: "
+        on_empty_message "Please enter your age"
+        loop_on_empty
+        loop_on_invalid_int
+        on_invalid_int "You did not enter an integer for your age"
+        execute
+    }
+
+let iq =
+    Prompts.intPrompter {
+        prompt "Please enter your IQ: "
+        default_value 10
+        execute
+    }
 
 clear()
 
-writeLine $"Your name is %s{Format.underline name}"
+writeLine $"Your name is %s{(Format.underline >> Format.bold) name} and you are %s{Format.underline (string age)} years old with an IQ of %i{iq}"
 
 // type ConsoleState = {
 //     Name : string
@@ -35,11 +52,12 @@ writeLine $"Your name is %s{Format.underline name}"
 
 
 // console {
-//     let name = Prompts.textPrompt "Enter name: "
-//     let test = "hello world"
+//     let! name = Prompts.textPrompt "Enter name: "
+//     let! text = "hello world"
+//     let! text2 = $"Name is \"%s{Format.underline name}\"\n{text}"
 //     //clear()
-//     display test
-//     display $"Name is \"%s{Format.underline name}\""
+//     //display
+//     display text2
 // }
 
 // type TestBuilder() =

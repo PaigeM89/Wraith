@@ -108,22 +108,28 @@ module Console =
     module private EscapedWrites =
         let startUnderline = $"%c{escape}[04m"
         let endUnderline = $"%c{escape}[24m"
-
         let underline text = $"%s{startUnderline}%s{text}%s{endUnderline}"
+
+        let startBold = $"%c{escape}[01m"
+        let endBold = $"%c{escape}[22m"
+        let bold text = $"%s{startBold}%s{text}%s{endBold}"
 
     module Format =
         let underline = EscapedWrites.underline
+        let bold = EscapedWrites.bold
 
-    let runTaskU (t: Task) = t |> Async.AwaitTask |> Async.RunSynchronously
-    let runTask (t : Task<'a>) = t |> Async.AwaitTask |> Async.RunSynchronously
+    let private runTaskU (t: Task) = t |> Async.AwaitTask |> Async.RunSynchronously
+    let private runTask (t : Task<'a>) = t |> Async.AwaitTask |> Async.RunSynchronously
 
-    let reader = System.Console.In
-    let writer = System.Console.Out
+    module Write =
+        let private writer = System.Console.Out
+        let write (text : string) = writer.WriteAsync text |> runTaskU
+        let writeLine (text : string) = writer.WriteAsync text |> runTaskU
 
-    let textPrompt (text : string) =
-        writer.WriteAsync text
-        |> runTaskU
-        reader.ReadLine()
+    module Read =
+        let private reader = System.Console.In
+        let readLine() = reader.ReadLine()
+        let read() = reader.Read()
 
     let clear() = Console.Clear()
     let writeMessage (msg : Message) =
@@ -142,74 +148,139 @@ module Console =
     let writeLine (text: string) = Console.WriteLine text
 
     module Prompts =
-        type TextPromptConfig = {
+        type PromptConfig = {
             Prompt: string
             OnError: string option
             LoopOnEmpty: bool
+            ClearOnLoop: bool
         } with
             static member Default = {
                 Prompt = ""
                 OnError = None
                 LoopOnEmpty = false
+                ClearOnLoop = false
             }
 
             static member FromPrompt prompt = {
-                TextPromptConfig.Default with Prompt = prompt
+                PromptConfig.Default with Prompt = prompt
             }
+            member this.SetPrompt str = { this with Prompt = str }
+            member this.SetOnError onErr = { this with OnError = onErr }
+            member this.SetLoopOnEmpty b = { this with LoopOnEmpty = b }
+            member this.SetClearOnLoop b = { this with ClearOnLoop = b }
+
+        type TextPromptConfig = {
+            PromptConfig : PromptConfig
+        } with
+            static member Default = {
+                PromptConfig = PromptConfig.Default
+            }
+
+            static member FromPrompt prompt = {
+                TextPromptConfig.Default with PromptConfig = PromptConfig.FromPrompt prompt
+            }
+
+        let execute (config: PromptConfig) =
+            if config.LoopOnEmpty then
+                let rec loop input =
+                    match input with
+                    | Some input ->
+                        if String.IsNullOrWhiteSpace input then
+                            if config.ClearOnLoop then clear()
+                            match config.OnError with
+                            | Some errMsg ->
+                                Write.writeLine $"{errMsg}\n"
+                                Write.writeLine config.Prompt
+                                Read.readLine() |> Some |> loop
+                            | None ->
+                                Write.writeLine config.Prompt
+                                Read.readLine() |> Some |> loop
+                        else
+                            input
+                    | None ->
+                        Write.write config.Prompt
+                        Read.readLine() |> Some |> loop
+                loop None
+            else
+                Write.write config.Prompt
+                Read.readLine()
 
         type TextPromptBuilder() =
             member _.Yield _ = TextPromptConfig.Default
-
             [<CustomOperation("prompt")>]
-            member this.Prompt(state, prompt) = { state with Prompt = prompt }
+            member this.Prompt(state, prompt) = { state with PromptConfig = state.PromptConfig.SetPrompt prompt }
             [<CustomOperation("loop_on_empty")>]
-            member this.LoopOnEmpty(state) = { state with LoopOnEmpty = true }
-            [<CustomOperation("empty_message")>]
-            member this.EmptyMessage(state, errMsg) = { state with OnError = Some errMsg }
-
+            member this.LoopOnEmpty(state) = { state with PromptConfig = state.PromptConfig.SetLoopOnEmpty true }
+            [<CustomOperation("clear_on_loop")>]
+            member this.ClearOnLoop(state) = { state with PromptConfig = state.PromptConfig.SetClearOnLoop true }
+            [<CustomOperation("on_empty_message")>]
+            member this.EmptyMessage(state, errMsg) = { state with PromptConfig = state.PromptConfig.SetOnError (Some errMsg) }
             [<CustomOperation("execute")>]
-            member this.Execute (config) =
-                if config.LoopOnEmpty then
-                    let rec loop input =
-                        if String.IsNullOrWhiteSpace input then
-                            // todo: this shouldn't print on first execute
-                            match config.OnError with
-                            | Some errMsg ->
-                                writer.WriteAsync $"{errMsg}\n" |> runTaskU
-                                writer.WriteAsync config.Prompt |> runTaskU
-                                reader.ReadLine() |> loop
-                            | None ->
-                                writer.WriteAsync config.Prompt |> runTaskU
-                                reader.ReadLine() |> loop
-                        else
-                            input
-                    loop ""
-                else
-                    writer.WriteAsync config.Prompt |> runTaskU
-                    reader.ReadLine()
+            member this.Execute (config) = execute config.PromptConfig
 
         let textPrompter = TextPromptBuilder()
 
-        let execute (config: TextPromptConfig) =
-            if config.LoopOnEmpty then
-                let rec loop input =
-                    if String.IsNullOrWhiteSpace input then
-                        writer.WriteAsync "Please enter a value\n" |> runTaskU
-                        writer.WriteAsync config.Prompt |> runTaskU
-                        reader.ReadLine() |> loop
-                    else
-                        input
-                loop ""
-            else
-                writer.WriteAsync config.Prompt |> runTaskU
-                reader.ReadLine()
+        let textPrompt prompt =
+            let conf = TextPromptConfig.FromPrompt prompt
+            execute conf.PromptConfig
 
-        let textPrompt prompt = TextPromptConfig.FromPrompt prompt |> execute
+        type IntPromptConfig = {
+            PromptConfig: PromptConfig
+            LoopOnInvalidParse : bool
+            OnInvalidParse: string option
+            DefaultValue: int
+        } with
+            static member Default = {
+                PromptConfig = PromptConfig.Default
+                LoopOnInvalidParse = false
+                OnInvalidParse = None
+                DefaultValue = 0
+            }
+            static member FromPrompt prompt = {
+                PromptConfig = PromptConfig.FromPrompt prompt
+                LoopOnInvalidParse = false
+                OnInvalidParse = None
+                DefaultValue = 0
+            }
+
+        let rec executeIntPrompt (ipc : IntPromptConfig) =
+            let str = execute ipc.PromptConfig
+            match Int32.TryParse str with
+            | true, x -> x
+            | false, _ ->
+                if ipc.LoopOnInvalidParse then
+                    match ipc.OnInvalidParse with
+                    | Some errMsg -> Write.writeLine errMsg
+                    | None -> ()
+                    executeIntPrompt ipc
+                else
+                    ipc.DefaultValue
+
+        type IntPromptBuilder() =
+            member _.Yield _ = IntPromptConfig.Default
+            [<CustomOperation("prompt")>]
+            member this.Prompt(state: IntPromptConfig, prompt) = { state with PromptConfig = state.PromptConfig.SetPrompt prompt }
+            [<CustomOperation("loop_on_empty")>]
+            member this.LoopOnEmpty(state: IntPromptConfig) = { state with PromptConfig = state.PromptConfig.SetLoopOnEmpty true }
+            [<CustomOperation("clear_on_loop")>]
+            member this.ClearOnLoop(state: IntPromptConfig) = { state with PromptConfig = state.PromptConfig.SetClearOnLoop true }
+            [<CustomOperation("on_empty_message")>]
+            member this.EmptyMessage(state: IntPromptConfig, errMsg) = { state with PromptConfig = state.PromptConfig.SetOnError (Some errMsg) }
+            [<CustomOperation("loop_on_invalid_int")>]
+            member this.LoopOnInvalidInt(state: IntPromptConfig) = { state with LoopOnInvalidParse = true }
+            [<CustomOperation("on_invalid_int")>]
+            member this.InvalidInt(state: IntPromptConfig, errMsg) = { state with OnInvalidParse = Some errMsg }
+            [<CustomOperation("default_value")>]
+            member this.DefaultValue(state: IntPromptConfig, dv) = { state with DefaultValue = dv }
+            [<CustomOperation("execute")>]
+            member this.Execute (config) = executeIntPrompt config
+
+        let intPrompter = IntPromptBuilder()
 
     type ConsoleBuilder() =
-        member _.Yield _ = ()
+        member _.Yield _ = ""
 
-        member this.Bind(state, func) = func state
+        member this.Bind(text, func) = text + " " + (func text)
 
         [<CustomOperation("clear")>]
         member _.Clear (_, ()) =
@@ -218,7 +289,6 @@ module Console =
         [<CustomOperation("display")>]
         member _.Display(_, text) =
             writeLine text
-            ()
 
     let console = ConsoleBuilder()
 
