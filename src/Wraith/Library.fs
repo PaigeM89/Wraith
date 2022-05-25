@@ -242,19 +242,23 @@ module Console =
                 OnInvalidParse = None
                 DefaultValue = 0
             }
+            member this.Execute() =
+                let rec loop() =
+                    let str = execute this.PromptConfig
+                    match Int32.TryParse str with
+                    | true, x -> x
+                    | false, _ ->
+                        if this.LoopOnInvalidParse then
+                            match this.OnInvalidParse with
+                            | Some errMsg -> Write.writeLine errMsg
+                            | None -> ()
+                            loop()
+                        else
+                            this.DefaultValue
+                loop()
 
         let rec executeIntPrompt (ipc : IntPromptConfig) =
-            let str = execute ipc.PromptConfig
-            match Int32.TryParse str with
-            | true, x -> x
-            | false, _ ->
-                if ipc.LoopOnInvalidParse then
-                    match ipc.OnInvalidParse with
-                    | Some errMsg -> Write.writeLine errMsg
-                    | None -> ()
-                    executeIntPrompt ipc
-                else
-                    ipc.DefaultValue
+            ipc.Execute()
 
         type IntPromptBuilder() =
             member _.Yield _ = IntPromptConfig.Default
