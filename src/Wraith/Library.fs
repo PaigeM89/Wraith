@@ -132,6 +132,7 @@ module Console =
         let read() = reader.Read()
 
     let clear() = Console.Clear()
+
     let writeMessage (msg : Message) =
         let rec traverse rem prefix postfix =
             match rem with
@@ -280,6 +281,48 @@ module Console =
             member this.Execute (config) = executeIntPrompt config
 
         let intPrompter = IntPromptBuilder()
+
+    module ListPrompts =
+
+        let rec executeListPrompt title (options: (string * 'a) list) currentIndex =
+            Console.Clear()
+            match title with
+            | Some title ->
+                writeLine title
+            | None -> ()
+            options
+            |> List.iteri (fun index (o, action) ->
+                if index = currentIndex then
+                    writeLine (" >" + o)
+                else
+                    writeLine ("  " + o)
+            )
+            let c = Console.ReadKey(true).Key
+            match c with
+            | ConsoleKey.UpArrow ->
+                let nextIndex = if currentIndex - 1 < 0 then 0 else currentIndex - 1
+                executeListPrompt title options nextIndex
+            | ConsoleKey.DownArrow ->
+                let nextIndex = if currentIndex + 1 >= (List.length options) then currentIndex else currentIndex + 1
+                executeListPrompt title options nextIndex
+            | ConsoleKey.Enter ->
+                options
+                |> List.item currentIndex
+                |> snd
+            | _ -> executeListPrompt title options currentIndex
+
+        type ListPromptConfig<'a>  = {
+            Title : string option
+            Options : (string * 'a) list
+        } with
+            static member Default = {
+                Title = None
+                Options = []
+            }
+
+            member this.Execute() =
+                let rec loop() = executeListPrompt this.Title this.Options 0
+                loop()
 
     type ConsoleBuilder() =
         member _.Yield _ = ""

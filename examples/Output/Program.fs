@@ -11,35 +11,47 @@ printfn $"Term, colorterm: %A{term}, %A{colorTerm}"
 
 open Wraith.Console
 
-let name =
-    Prompts.textPrompter {
-        prompt "Enter name: "
-        on_empty_message "Please enter a valid name"
-        loop_on_empty
-        clear_on_loop
-        execute
-    }
+// let name =
+//     Prompts.textPrompter {
+//         prompt "Enter name: "
+//         on_empty_message "Please enter a valid name"
+//         loop_on_empty
+//         clear_on_loop
+//         execute
+//     }
 
-let age =
-    Prompts.intPrompter {
-        prompt "Enter age: "
-        on_empty_message "Please enter your age"
-        loop_on_empty
-        loop_on_invalid_int
-        on_invalid_int "You did not enter an integer for your age"
-        execute
-    }
+// let age =
+//     Prompts.intPrompter {
+//         prompt "Enter age: "
+//         on_empty_message "Please enter your age"
+//         loop_on_empty
+//         loop_on_invalid_int
+//         on_invalid_int "You did not enter an integer for your age"
+//         execute
+//     }
 
-let iq =
-    Prompts.intPrompter {
-        prompt "Please enter your IQ: "
-        default_value 10
-        execute
-    }
+// let iq =
+//     Prompts.intPrompter {
+//         prompt "Please enter your IQ: "
+//         default_value 10
+//         execute
+//     }
 
-clear()
+// clear()
 
-writeLine $"Your name is %s{(Format.underline >> Format.bold) name} and you are %s{Format.underline (string age)} years old with an IQ of %i{iq}"
+// writeLine $"Your name is %s{(Format.underline >> Format.bold) name} and you are %s{Format.underline (string age)} years old with an IQ of %i{iq}"
+
+let listConfig : ListPrompts.ListPromptConfig<string> = {
+    Title = Some "Pick a color"
+    Options = [
+        "Red", "You picked red!"
+        "Blue", "You picked blue!"
+        "Green", "You picked green!"
+    ]
+}
+
+let selected = listConfig.Execute()
+printfn "%s" selected
 
 // type ConsoleState = {
 //     Name : string
