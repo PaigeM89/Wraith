@@ -118,6 +118,24 @@ module Console =
         let underline = EscapedWrites.underline
         let bold = EscapedWrites.bold
 
+    module Color =
+        let private startFGBlack = $"%c{escape}[30m"
+        let private startFGRed = $"%c{escape}[31m"
+        let private startFGGreen = $"%c{escape}[32m"
+        let private startFGYellow = $"%c{escape}[33m"
+        let private startFGBlue = $"%c{escape}[34m"
+        let private startFGWhite = $"%c{escape}[37m"
+        let private startFGDefault = $"%c{escape}[39m"
+
+        let private wrap color text = $"%s{color}%s{text}%s{startFGDefault}"
+
+        let black text = wrap startFGBlack text
+        let red text = wrap startFGRed text
+        let green text = wrap startFGGreen text
+        let yellow text = wrap startFGYellow text
+        let blue text = wrap startFGBlue text
+        let white text = wrap startFGWhite text
+
     let private runTaskU (t: Task) = t |> Async.AwaitTask |> Async.RunSynchronously
     let private runTask (t : Task<'a>) = t |> Async.AwaitTask |> Async.RunSynchronously
 
@@ -181,7 +199,32 @@ module Console =
                 TextPromptConfig.Default with PromptConfig = PromptConfig.FromPrompt prompt
             }
 
-        let execute (config: PromptConfig) =
+            member this.Execute() =
+                if this.PromptConfig.LoopOnEmpty then
+                    let rec loop input =
+                        match input with
+                        | Some input ->
+                            if String.IsNullOrWhiteSpace input then
+                                if this.PromptConfig.ClearOnLoop then clear()
+                                match this.PromptConfig.OnError with
+                                | Some errMsg ->
+                                    Write.writeLine $"{errMsg}\n"
+                                    Write.writeLine this.PromptConfig.Prompt
+                                    Read.readLine() |> Some |> loop
+                                | None ->
+                                    Write.writeLine this.PromptConfig.Prompt
+                                    Read.readLine() |> Some |> loop
+                            else
+                                input
+                        | None ->
+                            Write.write this.PromptConfig.Prompt
+                            Read.readLine() |> Some |> loop
+                    loop None
+                else
+                    Write.write this.PromptConfig.Prompt
+                    Read.readLine()
+
+        let private execute (config: PromptConfig) =
             if config.LoopOnEmpty then
                 let rec loop input =
                     match input with
@@ -217,13 +260,15 @@ module Console =
             [<CustomOperation("on_empty_message")>]
             member this.EmptyMessage(state, errMsg) = { state with PromptConfig = state.PromptConfig.SetOnError (Some errMsg) }
             [<CustomOperation("execute")>]
-            member this.Execute (config) = execute config.PromptConfig
+            member this.Execute (config : TextPromptConfig) = config.Execute()
 
         let textPrompter = TextPromptBuilder()
 
-        let textPrompt prompt =
+        let executeTextPrompt (tpc : TextPromptConfig) = tpc.Execute()
+
+        let basicTextPrompt prompt =
             let conf = TextPromptConfig.FromPrompt prompt
-            execute conf.PromptConfig
+            conf.Execute()
 
         type IntPromptConfig = {
             PromptConfig: PromptConfig
@@ -291,7 +336,7 @@ module Console =
                 writeLine title
             | None -> ()
             options
-            |> List.iteri (fun index (o, action) ->
+            |> List.iteri (fun index (o, _) ->
                 if index = currentIndex then
                     writeLine (" >" + o)
                 else
