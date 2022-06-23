@@ -285,7 +285,7 @@ module ListPrompts =
 
     let listPrompter<'a>() = ListPromptBuilder<'a>()
 
-    type NumberedListPrompt<'a> = {
+    type NumberedListPromptConfig<'a> = {
         Config : ListPromptConfig<'a>
         PromptText : string option
         IsZeroBased : bool
@@ -319,6 +319,23 @@ module ListPrompts =
                 let index = ipc()
                 List.item (if this.IsZeroBased then index else index - 1) this.Config.Options |> snd
             execute()
+
+    type NumberedListPromptBuilder<'a>() =
+        member _.Yield _ = NumberedListPromptConfig<'a>.Default
+        [<CustomOperation("title")>]
+        member this.Title(config : NumberedListPromptConfig<'a>, title) = { config with Config = { config.Config with Title = Some title } }
+        [<CustomOperation("options")>]
+        member this.Options(config : NumberedListPromptConfig<'a>, options) = { config with Config = { config.Config with Options = options } }
+        [<CustomOperation("prompt_text")>]
+        member this.PromptText(config, prompt) = { config with PromptText = Some prompt }
+        [<CustomOperation("is_zero_based")>]
+        member this.IsZeroBased(config) = { config with IsZeroBased = true }
+        [<CustomOperation("is_one_based")>]
+        member this.IsOneBased(config) = { config with IsZeroBased = false }
+        [<CustomOperation("execute")>]
+        member this.Execute(config: NumberedListPromptConfig<'a>) = config.Execute()
+
+    let numberedListPrompter<'a>() = NumberedListPromptBuilder<'a>()
 
 // todo: can this even be done?
 // type ConsoleBuilder() =

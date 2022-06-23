@@ -67,7 +67,7 @@ let listOptions = [
 // }
 // printfn "%s" selected
 
-let numberedList : ListPrompts.NumberedListPrompt<string> = {
+let numberedList : ListPrompts.NumberedListPromptConfig<string> = {
     Config = {
         Title = Some "Numbered list prompt"
         Options = listOptions
@@ -76,8 +76,15 @@ let numberedList : ListPrompts.NumberedListPrompt<string> = {
     IsZeroBased = false
 }
 
-let selectedIndex = numberedList.Execute()
-printfn "You selected %A" selectedIndex
+let selected = ListPrompts.numberedListPrompter<string>() {
+    title listTitle
+    options listOptions
+    prompt_text "Color: "
+    is_one_based
+    execute
+}
+
+printfn "%s" selected
 
 
 // type ConsoleState = {
