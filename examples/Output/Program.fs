@@ -1,35 +1,31 @@
 ﻿open Wraith
-open Wraith.Ansi
-open Wraith.Ansi.Operators
 
 open System
 
-let colorTerm = Environment.GetEnvironmentVariable("COLORTERM")
-let term = Environment.GetEnvironmentVariable("TERM")
+// let colorTerm = Environment.GetEnvironmentVariable("COLORTERM")
+// let term = Environment.GetEnvironmentVariable("TERM")
 
-printfn $"Term, colorterm: %A{term}, %A{colorTerm}"
+// printfn $"Term, colorterm: %A{term}, %A{colorTerm}"
 
-open Wraith.Console
+// let name =
+//     Prompts.textPrompter {
+//         prompt "Enter name: "
+//         on_empty_message "Please enter a valid name"
+//         loop_on_empty
+//         clear_on_loop
+//         execute
+//     }
 
-let name =
-    Prompts.textPrompter {
-        prompt "Enter name: "
-        on_empty_message "Please enter a valid name"
-        loop_on_empty
-        clear_on_loop
-        execute
-    }
+// let name2 =
+//     let config = Prompts.textPrompter {
+//         prompt "Enter name again: "
+//         on_empty_message "Please actually enter a name"
+//         loop_on_empty
+//         clear_on_loop
+//     }
+//     config |> Prompts.executeTextPrompt
 
-let name2 =
-    let config = Prompts.textPrompter {
-        prompt "Enter name again: "
-        on_empty_message "Please actually enter a name"
-        loop_on_empty
-        clear_on_loop
-    }
-    config |> Prompts.executeTextPrompt
-
-printfn $"Your name is either {Format.underline name} or {Format.underline name2}."
+// printfn $"Your name is either {Format.underline name} or {Format.underline name2}."
 
 
 // let age =
@@ -53,19 +49,36 @@ printfn $"Your name is either {Format.underline name} or {Format.underline name2
 
 // writeLine $"Your name is %s{(Format.underline >> Format.bold) name} and you are %s{Format.underline (string age)} years old with an IQ of %i{iq}"
 
-// let redName = Console.Color.red "red!"
+let redName = Color.red "red"
+let blueName = Color.blue "blue"
+let greenName = Color.green "green"
 
-// let listConfig : ListPrompts.ListPromptConfig<string> = {
-//     Title = Some "Pick a color"
-//     Options = [
-//         "Red", $"You picked %s{redName} Nice pick!"
-//         "Blue", "You picked blue!"
-//         "Green", "You picked green!"
-//     ]
+let listTitle = "Pick a color"
+let listOptions = [
+    (Color.red "Red"), $"You picked %s{redName}! Nice pick!"
+    (Color.blue "Blue"), $"You picked %s{blueName}!"
+    (Color.green "Green"), $"You picked %s{greenName}!"
+]
+
+// let selected = ListPrompts.listPrompter<string>() {
+//     title listTitle
+//     options listOptions
+//     execute
 // }
-
-// let selected = listConfig.Execute()
 // printfn "%s" selected
+
+let numberedList : ListPrompts.NumberedListPrompt<string> = {
+    Config = {
+        Title = Some "Numbered list prompt"
+        Options = listOptions
+    }
+    PromptText = Some "Please select an option: "
+    IsZeroBased = false
+}
+
+let selectedIndex = numberedList.Execute()
+printfn "You selected %A" selectedIndex
+
 
 // type ConsoleState = {
 //     Name : string
