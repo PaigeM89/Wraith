@@ -242,7 +242,7 @@ module ListPrompts =
             Page = 0
         }
         member this.NextPage() = { this with Page = this.Page + 1 }
-        member this.PreviousPage() = { this with Page = this.Page - 1 }
+        member this.PreviousPage() = { this with Page = Math.Min(this.Page - 1, 0) }
 
     let rec executeListPrompt (pageConfig : PagingConfig) title (options: (string * 'a) list) currentIndex =
         Console.Clear()
@@ -252,6 +252,7 @@ module ListPrompts =
         | Some title ->
             writeLine title
         | None -> ()
+        if pageConfig.Page > 0 then writeLine "[...]"
         options
         |> List.iteri (fun index (o, _) ->
             if index >= min && index <= max then
@@ -260,6 +261,7 @@ module ListPrompts =
                 else
                     writeLine ("  " + o)
         )
+        if pageConfig.Page < max then writeLine "[...]"
         let c = Console.ReadKey(true).Key
         match c with
         | ConsoleKey.UpArrow ->
