@@ -233,44 +233,71 @@ module Prompts =
 
 module ListPrompts =
 
-    let rec executeListPrompt title (options: (string * 'a) list) currentIndex =
+    type PagingConfig = {
+        PageSize : int
+        Page : int
+    } with
+        static member Default = {
+            PageSize = System.Console.WindowHeight
+            Page = 0
+        }
+        member this.NextPage() = { this with Page = this.Page + 1 }
+        member this.PreviousPage() = { this with Page = this.Page - 1 }
+
+    let rec executeListPrompt (pageConfig : PagingConfig) title (options: (string * 'a) list) currentIndex =
         Console.Clear()
+        let min = pageConfig.Page * pageConfig.PageSize
+        let max = (pageConfig.Page + 1) * pageConfig.PageSize
         match title with
         | Some title ->
             writeLine title
         | None -> ()
         options
         |> List.iteri (fun index (o, _) ->
-            if index = currentIndex then
-                writeLine (" >" + o)
-            else
-                writeLine ("  " + o)
+            if index >= min && index <= max then
+                if index = currentIndex then
+                    writeLine (" >" + o)
+                else
+                    writeLine ("  " + o)
         )
         let c = Console.ReadKey(true).Key
         match c with
         | ConsoleKey.UpArrow ->
             let nextIndex = if currentIndex - 1 < 0 then 0 else currentIndex - 1
-            executeListPrompt title options nextIndex
+            let pageConfig = if nextIndex < min then pageConfig.PreviousPage() else pageConfig
+            executeListPrompt pageConfig title options nextIndex
         | ConsoleKey.DownArrow ->
             let nextIndex = if currentIndex + 1 >= (List.length options) then currentIndex else currentIndex + 1
-            executeListPrompt title options nextIndex
+            let pageConfig = if nextIndex > max then pageConfig.NextPage() else pageConfig
+            executeListPrompt pageConfig title options nextIndex
+        // page up & page down don't seem to work? seems to be captured by the terminal instead
+        | ConsoleKey.PageDown ->
+            let nextIndex = Math.Max(currentIndex + pageConfig.PageSize, List.length options)
+            let pageConfig = pageConfig.NextPage()
+            executeListPrompt pageConfig title options nextIndex
+        | ConsoleKey.PageUp ->
+            let nextIndex = Math.Min(currentIndex - pageConfig.PageSize, 0)
+            let pageConfig = pageConfig.PreviousPage()
+            executeListPrompt pageConfig title options nextIndex
         | ConsoleKey.Enter ->
             options
             |> List.item currentIndex
             |> snd
-        | _ -> executeListPrompt title options currentIndex
+        | _ -> executeListPrompt pageConfig title options currentIndex
 
     type ListPromptConfig<'a>  = {
         Title : string option
         Options : (string * 'a) list
+        PagingConfig : PagingConfig
     } with
         static member Default = {
             Title = None
             Options = List.empty<string * 'a>
+            PagingConfig = PagingConfig.Default
         }
 
         member this.Execute() =
-            let rec loop() = executeListPrompt this.Title this.Options 0
+            let rec loop() = executeListPrompt this.PagingConfig this.Title this.Options 0
             loop()
 
 
@@ -280,6 +307,8 @@ module ListPrompts =
         member this.Title(config : ListPromptConfig<'a>, title) = { config with Title = Some title }
         [<CustomOperation("options")>]
         member this.Options(config : ListPromptConfig<'a>, options) = { config with Options = options }
+        [<CustomOperation("page_size")>]
+        member this.PageSize(config: ListPromptConfig<'a>, size) = { config with PagingConfig = { config.PagingConfig with PageSize = size } }
         [<CustomOperation("execute")>]
         member this.Execute(config : ListPromptConfig<'a>) = config.Execute()
 

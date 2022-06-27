@@ -54,37 +54,37 @@ let blueName = Color.blue "blue"
 let greenName = Color.green "green"
 
 let listTitle = "Pick a color"
-let listOptions = [
-    (Color.red "Red"), $"You picked %s{redName}! Nice pick!"
-    (Color.blue "Blue"), $"You picked %s{blueName}!"
-    (Color.green "Green"), $"You picked %s{greenName}!"
-]
+// let listOptions = [
+//     (Color.red "Red"), $"You picked %s{redName}! Nice pick!"
+//     (Color.blue "Blue"), $"You picked %s{blueName}!"
+//     (Color.green "Green"), $"You picked %s{greenName}!"
+// ]
 
-// let selected = ListPrompts.listPrompter<string>() {
-//     title listTitle
-//     options listOptions
-//     execute
-// }
-// printfn "%s" selected
+let listOptions =
+    [
+        for i in 1..100 do
+            $"Option #%i{i}", $"Option #%i{i}"
+    ]
 
-let numberedList : ListPrompts.NumberedListPromptConfig<string> = {
-    Config = {
-        Title = Some "Numbered list prompt"
-        Options = listOptions
-    }
-    PromptText = Some "Please select an option: "
-    IsZeroBased = false
-}
-
-let selected = ListPrompts.numberedListPrompter<string>() {
+let selected = ListPrompts.listPrompter<string>() {
     title listTitle
     options listOptions
-    prompt_text "Color: "
-    is_one_based
+    page_size 12
     execute
 }
-
 printfn "%s" selected
+
+
+// let selected = ListPrompts.numberedListPrompter<string>() {
+//     title listTitle
+//     options listOptions
+//     prompt_text "Color: "
+//     is_one_based
+//     execute
+// }
+
+// printfn "%s" selected
+
 
 
 // type ConsoleState = {
