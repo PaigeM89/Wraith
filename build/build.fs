@@ -609,25 +609,25 @@ let formatCode _ =
     if not result.OK then
         printfn "Errors while formatting all files: %A" result.Messages
 
-let checkFormatCode _ =
-    let result =
-        [
-            srcCodeGlob
-            testsCodeGlob
-        ]
-        |> Seq.collect id
-        // Ignore AssemblyInfo
-        |> Seq.filter(fun f -> f.EndsWith("AssemblyInfo.fs") |> not)
-        |> String.concat " "
-        |> sprintf "%s --check"
-        |> dotnet.fantomas
+// let checkFormatCode _ =
+//     let result =
+//         [
+//             srcCodeGlob
+//             testsCodeGlob
+//         ]
+//         |> Seq.collect id
+//         // Ignore AssemblyInfo
+//         |> Seq.filter(fun f -> f.EndsWith("AssemblyInfo.fs") |> not)
+//         |> String.concat " "
+//         |> sprintf "%s --check"
+//         |> dotnet.fantomas
 
-    if result.ExitCode = 0 then
-        Trace.log "No files need formatting"
-    elif result.ExitCode = 99 then
-        failwith "Some files need formatting, check output for more info"
-    else
-        Trace.logf "Errors while formatting: %A" result.Errors
+//     if result.ExitCode = 0 then
+//         Trace.log "No files need formatting"
+//     elif result.ExitCode = 99 then
+//         failwith "Some files need formatting, check output for more info"
+//     else
+//         Trace.logf "Errors while formatting: %A" result.Errors
 
 let buildDocs _ =
     DocsTool.build ()
@@ -680,7 +680,7 @@ let initTargets () =
     Target.create "GitRelease" gitRelease
     Target.create "GitHubRelease" githubRelease
     Target.create "FormatCode" formatCode
-    Target.create "CheckFormatCode" checkFormatCode
+    // Target.create "CheckFormatCode" checkFormatCode
     Target.create "Release" ignore
     Target.create "BuildDocs" buildDocs
     Target.create "WatchDocs" watchDocs
