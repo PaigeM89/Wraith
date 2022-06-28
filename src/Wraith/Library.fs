@@ -7,19 +7,14 @@ open System.Threading.Tasks
 let private escape = '\u001B'
 
 [<RequireQualifiedAccess>]
-module private EscapedWrites =
-    let startUnderline = $"%c{escape}[04m"
-    let endUnderline = $"%c{escape}[24m"
+module Format =
+    let private startUnderline = $"%c{escape}[04m"
+    let private endUnderline = $"%c{escape}[24m"
     let underline text = $"%s{startUnderline}%s{text}%s{endUnderline}"
 
-    let startBold = $"%c{escape}[01m"
-    let endBold = $"%c{escape}[22m"
+    let private startBold = $"%c{escape}[01m"
+    let private endBold = $"%c{escape}[22m"
     let bold text = $"%s{startBold}%s{text}%s{endBold}"
-
-[<RequireQualifiedAccess>]
-module Format =
-    let underline = EscapedWrites.underline
-    let bold = EscapedWrites.bold
 
 module Color =
     let private startFGBlack = $"%c{escape}[30m"
@@ -43,6 +38,8 @@ module Color =
     let magenta text = wrap startFGMagenta text
     let cyan text = wrap startFGCyan text
     let white text = wrap startFGWhite text
+
+    // todo: backgrounds
 
 let private runTaskU (t: Task) = t |> Async.AwaitTask |> Async.RunSynchronously
 let private runTask (t : Task<'a>) = t |> Async.AwaitTask |> Async.RunSynchronously
@@ -351,7 +348,7 @@ module ListPrompts =
                 writeLine ($" %i{index}. %s{o}")
         )
         if scrollingConfig.MaxIndex < (List.length options) then writeLine "[...]"
-        writeLine $"Select an option: %s{currentInput}"
+        Write.write $"Select an option: %s{currentInput}"
         let c = Console.ReadKey(true).Key
         match c with
         | ConsoleKey.UpArrow ->

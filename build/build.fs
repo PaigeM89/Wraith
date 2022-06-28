@@ -718,8 +718,8 @@ let initTargets () =
         // ==> "CheckFormatCode"
         ==> "DotnetBuild"
         ==> "FSharpAnalyzers"
-        ==> "DotnetTest"
-        =?> ("GenerateCoverageReport", not disableCodeCoverage)
+        // ==> "DotnetTest"
+        // =?> ("GenerateCoverageReport", not disableCodeCoverage)
         ==> "DotnetPack"
         // ==> "SourceLinkTest"
         ==> "PublishToNuGet"

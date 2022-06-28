@@ -88,17 +88,6 @@ match selected2 with
 | Error e ->
     printfn "Error selecting: %A" e
 
-// let selected = ListPrompts.numberedListPrompter<string>() {
-//     title listTitle
-//     options listOptions
-//     prompt_text "Color: "
-//     is_one_based
-//     execute
-// }
-
-// printfn "%s" selected
-
-
 
 // type ConsoleState = {
 //     Name : string
