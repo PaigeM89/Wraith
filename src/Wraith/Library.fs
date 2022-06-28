@@ -316,40 +316,112 @@ module ListPrompts =
 
     let listPrompter<'a>() = ListPromptBuilder<'a>()
 
+    type NumberedListSelectionError =
+    | InvalidIndex of index: int
+    | UnparsableIndex of input : string
+
+    type ScrollingConfig = {
+        PageSize : int
+        MinIndex : int
+        MaxIndex : int
+    } with
+        static member Default = {
+            PageSize = System.Console.WindowHeight
+            MinIndex = 0
+            MaxIndex = System.Console.WindowHeight
+        }
+        static member FromPageSize ps = {
+            PageSize = ps
+            MinIndex = 0
+            MaxIndex = ps
+        }
+        member this.Advance() = { this with MinIndex = this.MinIndex + 1; MaxIndex = this.MaxIndex + 1 }
+        member this.Backtrack() = { this with MinIndex = Math.Max(0, this.MinIndex - 1); MaxIndex = Math.Max(this.MaxIndex - 1, System.Console.WindowHeight) }
+
+    let rec executeNumberedListPrompt (scrollingConfig : ScrollingConfig) title (options: (string * 'a) list) currentInput  =
+        Console.Clear()
+        match title with
+        | Some title ->
+            writeLine title
+        | None -> ()
+        if scrollingConfig.MinIndex > 0 then writeLine "[...]"
+        options
+        |> List.iteri (fun index (o, _) ->
+            if index >= scrollingConfig.MinIndex && index <= scrollingConfig.MaxIndex then
+                writeLine ($" %i{index}. %s{o}")
+        )
+        if scrollingConfig.MaxIndex < (List.length options) then writeLine "[...]"
+        writeLine $"Select an option: %s{currentInput}"
+        let c = Console.ReadKey(true).Key
+        match c with
+        | ConsoleKey.UpArrow ->
+            let scrollingConfig = scrollingConfig.Backtrack()
+            executeNumberedListPrompt scrollingConfig title options currentInput
+        | ConsoleKey.DownArrow ->
+            let scrollingConfig = scrollingConfig.Advance()
+            executeNumberedListPrompt scrollingConfig title options currentInput
+        | ConsoleKey.Enter ->
+            if currentInput = "" then
+                executeNumberedListPrompt scrollingConfig title options currentInput
+            else
+                let targetIndex =
+                    match Int32.TryParse currentInput with
+                    | true, x -> Ok x
+                    | false, _ -> UnparsableIndex currentInput |> Error
+                match targetIndex with
+                | Ok i ->
+                    match options |> List.tryItem i with
+                    | Some x -> Ok (snd x)
+                    | None -> InvalidIndex i |> Error
+                | Error e -> Error e
+        | ConsoleKey.D0
+        | ConsoleKey.NumPad0 ->
+            executeNumberedListPrompt scrollingConfig title options (currentInput + "0")
+        | ConsoleKey.D1
+        | ConsoleKey.NumPad1 ->
+            executeNumberedListPrompt scrollingConfig title options (currentInput + "1")
+        | ConsoleKey.D2
+        | ConsoleKey.NumPad2 ->
+            executeNumberedListPrompt scrollingConfig title options (currentInput + "2")
+        | ConsoleKey.D3
+        | ConsoleKey.NumPad3 ->
+            executeNumberedListPrompt scrollingConfig title options (currentInput + "3")
+        | ConsoleKey.D4
+        | ConsoleKey.NumPad4 ->
+            executeNumberedListPrompt scrollingConfig title options (currentInput + "4")
+        | ConsoleKey.D5
+        | ConsoleKey.NumPad5 ->
+            executeNumberedListPrompt scrollingConfig title options (currentInput + "5")
+        | ConsoleKey.D6
+        | ConsoleKey.NumPad6 ->
+            executeNumberedListPrompt scrollingConfig title options (currentInput + "6")
+        | ConsoleKey.D7
+        | ConsoleKey.NumPad7 ->
+            executeNumberedListPrompt scrollingConfig title options (currentInput + "7")
+        | ConsoleKey.D8
+        | ConsoleKey.NumPad8 ->
+            executeNumberedListPrompt scrollingConfig title options (currentInput + "8")
+        | ConsoleKey.D9
+        | ConsoleKey.NumPad9 ->
+            executeNumberedListPrompt scrollingConfig title options (currentInput + "9")
+        | _ -> executeNumberedListPrompt scrollingConfig title options currentInput
+
     type NumberedListPromptConfig<'a> = {
         Config : ListPromptConfig<'a>
         PromptText : string option
         IsZeroBased : bool
+        ScrollingConfig : ScrollingConfig
     } with
         static member Default = {
             Config = ListPromptConfig<'a>.Default
             PromptText = None
             IsZeroBased = true
+            ScrollingConfig = ScrollingConfig.Default
         }
 
         member this.Execute() =
             let isZeroBased i = if this.IsZeroBased then i else i + 1
-            let ipc() = Prompts.intPrompter {
-                prompt (Option.defaultValue "Enter an option: " this.PromptText)
-                loop_on_empty
-                loop_on_invalid_int
-                loop_on_outside_range ((if this.IsZeroBased then 0 else 1), List.length this.Config.Options)
-                execute
-            }
-            let rec execute() =
-                Console.Clear()
-                match this.Config.Title with
-                | Some title ->
-                    writeLine title
-                | None -> ()
-                this.Config.Options
-                |> List.iteri (fun index (o, _) ->
-                    let i = if this.IsZeroBased then index else index + 1
-                    writeLine ($"  %i{i}. %s{o}")
-                )
-                let index = ipc()
-                List.item (if this.IsZeroBased then index else index - 1) this.Config.Options |> snd
-            execute()
+            executeNumberedListPrompt this.ScrollingConfig this.Config.Title this.Config.Options ""
 
     type NumberedListPromptBuilder<'a>() =
         member _.Yield _ = NumberedListPromptConfig<'a>.Default
@@ -363,6 +435,8 @@ module ListPrompts =
         member this.IsZeroBased(config) = { config with IsZeroBased = true }
         [<CustomOperation("is_one_based")>]
         member this.IsOneBased(config) = { config with IsZeroBased = false }
+        [<CustomOperation("page_size")>]
+        member this.PageSize(config, pageSize) = { config with ScrollingConfig = ScrollingConfig.FromPageSize pageSize }
         [<CustomOperation("execute")>]
         member this.Execute(config: NumberedListPromptConfig<'a>) = config.Execute()
 

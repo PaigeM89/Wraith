@@ -75,6 +75,19 @@ let selected = ListPrompts.listPrompter<string>() {
 printfn "%s" selected
 
 
+let selected2 = ListPrompts.numberedListPrompter<string>() {
+    title listTitle
+    options listOptions
+    page_size 12
+    execute
+}
+
+match selected2 with
+| Ok selected ->
+    printfn "Selected: %s" selected
+| Error e ->
+    printfn "Error selecting: %A" e
+
 // let selected = ListPrompts.numberedListPrompter<string>() {
 //     title listTitle
 //     options listOptions

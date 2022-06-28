@@ -6,6 +6,13 @@ https://github.com/david-von-tamar/ansi-term/blob/master/Tamar.ANSITerm/Console.
 
 https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
 
+## Todo
+
+- [ ] Build out more examples
+- [ ] Make paging options more configurable
+- [ ] Make paging display page #s and counts on header & footer
+- [ ] See if page up & page down can work (explore shift + arrow keys if not)
+
 ---
 
 ## Builds
