@@ -8,9 +8,7 @@
   <ItemGroup>
     <Compile Include="Program.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\Wraith\Wraith.fsproj" />
   </ItemGroup>
-
 </Project>
