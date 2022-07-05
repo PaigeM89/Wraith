@@ -47,7 +47,7 @@ let private runTask (t : Task<'a>) = t |> Async.AwaitTask |> Async.RunSynchronou
 module Write =
     let private writer = System.Console.Out
     let write (text : string) = writer.WriteAsync text |> runTaskU
-    let writeLine (text : string) = writer.WriteAsync text |> runTaskU
+    let writeLine (text : string) = writer.WriteLineAsync text |> runTaskU
 
 module Read =
     let private reader = System.Console.In
@@ -55,8 +55,6 @@ module Read =
     let read() = reader.Read()
 
 let clear() = Console.Clear()
-
-let writeLine (text: string) = Console.WriteLine text
 
 module Prompts =
     type PromptConfig = {
@@ -247,18 +245,18 @@ module ListPrompts =
         let max = (pageConfig.Page + 1) * pageConfig.PageSize
         match title with
         | Some title ->
-            writeLine title
+            Write.writeLine title
         | None -> ()
-        if pageConfig.Page > 0 then writeLine "[...]"
+        if pageConfig.Page > 0 then Write.writeLine "[...]"
         options
         |> List.iteri (fun index (o, _) ->
             if index >= min && index <= max then
                 if index = currentIndex then
-                    writeLine (" >" + o)
+                    Write.writeLine (" >" + o)
                 else
-                    writeLine ("  " + o)
+                    Write.writeLine ("  " + o)
         )
-        if pageConfig.Page < max then writeLine "[...]"
+        if pageConfig.Page < (List.length options / pageConfig.PageSize) then Write.writeLine "[...]"
         let c = Console.ReadKey(true).Key
         match c with
         | ConsoleKey.UpArrow ->
@@ -339,15 +337,15 @@ module ListPrompts =
         Console.Clear()
         match title with
         | Some title ->
-            writeLine title
+            Write.writeLine title
         | None -> ()
-        if scrollingConfig.MinIndex > 0 then writeLine "[...]"
+        if scrollingConfig.MinIndex > 0 then Write.writeLine "[...]"
         options
         |> List.iteri (fun index (o, _) ->
             if index >= scrollingConfig.MinIndex && index <= scrollingConfig.MaxIndex then
-                writeLine ($" %i{index}. %s{o}")
+                Write.writeLine ($" %i{index}. %s{o}")
         )
-        if scrollingConfig.MaxIndex < (List.length options) then writeLine "[...]"
+        if scrollingConfig.MaxIndex < (List.length options) then Write.writeLine "[...]"
         Write.write $"Select an option: %s{currentInput}"
         let c = Console.ReadKey(true).Key
         match c with
