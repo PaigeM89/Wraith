@@ -1,17 +1,49 @@
 # Wraith
 
-Resources: 
+**Wraith** is a library for building command-line applications. Wraith is heavily inspired by [Spectre.Console](https://spectreconsole.net/) but is designed around F#, with a focus on computation expressions to let you build simple, elegant inputs.
 
-https://github.com/david-von-tamar/ansi-term/blob/master/Tamar.ANSITerm/Console.cs
+```FSharp
+let nameStr = Format.underline "name"
+let namePrompt() =
+    Prompts.textPrompter {
+        prompt $"Enter %s{nameStr}: "
+        // on empty input, re-ask for the name
+        loop_on_empty
+        // display this message when the input is empty
+        on_empty_message "Please enter a valid name"
+        // clear display (so the prompt doesn't appear multiple times) on loop
+        clear_on_loop
+        // execute this builder and return a string
+        execute
+    }
+```
+
+See the `examples` folder for more examples on how to use Wraith.
+
+**Note**: Wraith is _very_ early in the development process and things might change a bit as the library grows. Please make issues to document your needs & feel free to contribute!
+
+Resources: 
 
 https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
 
 ## Todo
 
-- [ ] Build out more examples
 - [ ] Make paging options more configurable
 - [ ] Make paging display page #s and counts on header & footer
 - [ ] See if page up & page down can work (explore shift + arrow keys if not)
+- [ ] ~Steal~ Be heavily inspired by Spectre's fancy border tooling.
+- [ ] ~Steal~ Be heavily inspired by Spectre's live displays.
+- [ ] Multiple select lists.
+- [ ] Text alignment (left/justify/right).
+- [ ] More ansi styles support (even the ones that aren't often supported).
+- [ ] Full RGB color support.
+- [ ] Debate stealing Spectre's in-line markup syntax for styling & colors.
+- [ ] Figure out a better unit testing story. Or, really, just figure out any useful unit tests at all.
+- [ ] Tables/Grids
+- [ ] Charts
+- [ ] Rules (big horizontal bars with optional text)
+- [ ] Full canvas to let your inner artist free.
+
 
 ---
 
