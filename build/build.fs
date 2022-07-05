@@ -61,7 +61,7 @@ let docsDir = __SOURCE_DIRECTORY__ </> ".." </> "docs"
 let docsSrcDir = __SOURCE_DIRECTORY__ </> ".." </> "docsSrc"
 let docsToolDir = __SOURCE_DIRECTORY__ </> ".." </> "docsTool"
 
-let gitOwner = "MyGithubUsername"
+let gitOwner = "PaigeM89"
 let gitRepoName = "Wraith"
 
 let gitHubRepoUrl = sprintf "https://github.com/%s/%s" gitOwner gitRepoName
@@ -721,7 +721,7 @@ let initTargets () =
         // ==> "DotnetTest"
         // =?> ("GenerateCoverageReport", not disableCodeCoverage)
         ==> "DotnetPack"
-        // ==> "SourceLinkTest"
+        ==> "SourceLinkTest"
         ==> "PublishToNuGet"
         ==> "GitRelease"
         ==> "GitHubRelease"
