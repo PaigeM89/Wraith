@@ -71,19 +71,21 @@ let mainMenuOptions = [
     "Exit", (fun state -> { state with Exit = true } )
 ]
 
-let mainMenu = ListPrompts.listPrompter<State -> State>() {
-    title mainMenuTitle
-    options mainMenuOptions
-    execute
-}
+let mainMenu state =
+    let f = // select a function from the menu
+        ListPrompts.listPrompter<State -> State>() {
+            title mainMenuTitle
+            options mainMenuOptions
+            execute
+        }
+    f state // execute that function
 
+// recurse through the menu until the user exits
 let rec menu state =
-    printfn "state before menu is %A" state
     let state = mainMenu state
-    printfn "State is %A" state
     match state.Exit with
     | true -> state
     | false -> menu state
 
-let finalState = menu (State.Default)
+let finalState = menu State.Default
 printfn "Final state is %A" finalState
