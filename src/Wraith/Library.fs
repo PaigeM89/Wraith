@@ -437,7 +437,7 @@ module ListPrompts =
 
     let numberedListPrompter<'a>() = NumberedListPromptBuilder<'a>()
 
-// todo: can this even be done?
+// todo: can this even be done? I want to make a single CE that can wrap a series of console interactions
 // type ConsoleBuilder() =
 //     member _.Yield _ = ""
 

@@ -5,7 +5,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <Title>Wraith</Title>
-    <Description>Wraith does the thing!</Description>
+    <Description>Wraith is a library for building F#-idiomatic console applications using computation expressions.</Description>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
