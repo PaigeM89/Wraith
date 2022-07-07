@@ -13,9 +13,9 @@ let namePrompt() =
         on_empty_message "Please enter a valid name"
         // clear display (so the prompt doesn't appear multiple times) on loop
         clear_on_loop
-        // execute this builder and return a string
-        execute
     }
+
+namePrompt() // executes the  prompt and returns the user's input
 ```
 
 See the `examples` folder for more examples on how to use Wraith.

@@ -10,8 +10,6 @@ let namePrompt() =
         on_empty_message "Please enter a valid name"
         // clear display (so the prompt doesn't appear multiple times) on loop
         clear_on_loop
-        // execute this builder and return a string
-        execute
     }
 
 let ageStr = Format.bold "age"
@@ -25,10 +23,8 @@ let agePrompt() =
         loop_on_invalid_int
         // Message to print if the input is not a number
         on_invalid_int "You did not enter an integer for your age"
-        // execute this builder and return an int
         // If the "loop" values are not set, the default value is 0
         // or `default_value` can be used to set the default value for the prompt
-        execute
     }
 
 let red = Color.red "red"
@@ -47,7 +43,6 @@ let selectedColorPrompt() =
     ListPrompts.listPrompter<string>() {
         title colorListTitle
         options colorListOptions
-        execute
     }
 
 // state to store user inputs
@@ -86,7 +81,6 @@ let mainMenu state =
         ListPrompts.listPrompter<State -> State>() {
             title mainMenuTitle
             options mainMenuOptions
-            execute
         }
     f state // execute that function
 

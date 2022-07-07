@@ -149,8 +149,8 @@ module Prompts =
         member this.ClearOnLoop(state) = { state with PromptConfig = state.PromptConfig.SetClearOnLoop true }
         [<CustomOperation("on_empty_message")>]
         member this.EmptyMessage(state, errMsg) = { state with PromptConfig = state.PromptConfig.SetOnError (Some errMsg) }
-        [<CustomOperation("execute")>]
-        member this.Execute (config : TextPromptConfig) = config.Execute()
+
+        member this.Run (config : TextPromptConfig) = config.Execute()
 
     let textPrompter = TextPromptBuilder()
 
@@ -221,8 +221,8 @@ module Prompts =
         member this.InvalidInt(state: IntPromptConfig, errMsg) = { state with OnInvalidParse = Some errMsg }
         [<CustomOperation("default_value")>]
         member this.DefaultValue(state: IntPromptConfig, dv) = { state with DefaultValue = dv }
-        [<CustomOperation("execute")>]
-        member this.Execute (config) = executeIntPrompt config
+
+        member this.Run (config) = executeIntPrompt config
 
     let intPrompter = IntPromptBuilder()
 
@@ -306,8 +306,8 @@ module ListPrompts =
         member this.Options(config : ListPromptConfig<'a>, options) = { config with Options = options }
         [<CustomOperation("page_size")>]
         member this.PageSize(config: ListPromptConfig<'a>, size) = { config with PagingConfig = { config.PagingConfig with PageSize = size } }
-        [<CustomOperation("execute")>]
-        member this.Execute(config : ListPromptConfig<'a>) = config.Execute()
+
+        member this.Run(config : ListPromptConfig<'a>) = config.Execute()
 
     let listPrompter<'a>() = ListPromptBuilder<'a>()
 
@@ -432,8 +432,8 @@ module ListPrompts =
         member this.IsOneBased(config) = { config with IsZeroBased = false }
         [<CustomOperation("page_size")>]
         member this.PageSize(config, pageSize) = { config with ScrollingConfig = ScrollingConfig.FromPageSize pageSize }
-        [<CustomOperation("execute")>]
-        member this.Execute(config: NumberedListPromptConfig<'a>) = config.Execute()
+
+        member this.Run(config: NumberedListPromptConfig<'a>) = config.Execute()
 
     let numberedListPrompter<'a>() = NumberedListPromptBuilder<'a>()
 
