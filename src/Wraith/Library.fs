@@ -41,6 +41,24 @@ module Color =
 
     // todo: backgrounds
 
+[<RequireQualifiedAccess>]
+module Align =
+  let private diff (text: string) = System.Console.BufferWidth - (text.Length)
+
+  let left text =
+    let padding = String.replicate (diff text) " "
+    text + padding
+  
+  let right text =
+    let padding = String.replicate (diff text) " "
+    padding + text
+
+  let center text =
+    let d = diff text
+    let leftPad = String.replicate (d/2) " "
+    let rightPad = String.replicate (d/2) " "
+    leftPad + text + rightPad
+
 let private runTaskU (t: Task) = t |> Async.AwaitTask |> Async.RunSynchronously
 let private runTask (t : Task<'a>) = t |> Async.AwaitTask |> Async.RunSynchronously
 

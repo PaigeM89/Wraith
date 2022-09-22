@@ -34,7 +34,7 @@ https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequen
 - [ ] ~Steal~ Be heavily inspired by Spectre's fancy border tooling.
 - [ ] ~Steal~ Be heavily inspired by Spectre's live displays.
 - [ ] Multiple select lists.
-- [ ] Text alignment (left/justify/right).
+- [x] Text alignment (left/justify/right).
 - [ ] More ansi styles support (even the ones that aren't often supported).
 - [ ] Full RGB color support.
 - [ ] Debate stealing Spectre's in-line markup syntax for styling & colors.

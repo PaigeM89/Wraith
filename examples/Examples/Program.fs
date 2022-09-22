@@ -66,7 +66,7 @@ let printState (state : State) =
     let _ = Read.read() // wait for a key press (we won't specifically look for Enter because we're lazy)
     state // return the unmodified state
 
-let mainMenuTitle = (Format.bold >> Format.underline) "Main menu"
+let mainMenuTitle = (Format.bold >> Format.underline >> Align.center) "Main menu"
 let mainMenuOptions = [
     "Enter name", (fun (state : State) -> { state with Name = namePrompt() } )
     "Enter age", (fun (state : State) -> { state with Age = agePrompt() } )
