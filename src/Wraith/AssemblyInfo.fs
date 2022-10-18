@@ -4,20 +4,20 @@ open System.Reflection
 
 [<assembly: AssemblyTitleAttribute("Wraith")>]
 [<assembly: AssemblyProductAttribute("Wraith")>]
-[<assembly: AssemblyVersionAttribute("0.2.0")>]
-[<assembly: AssemblyMetadataAttribute("ReleaseDate","2022-07-07T00:00:00.0000000-04:00")>]
-[<assembly: AssemblyFileVersionAttribute("0.2.0")>]
-[<assembly: AssemblyInformationalVersionAttribute("0.2.0")>]
+[<assembly: AssemblyVersionAttribute("0.3.0")>]
+[<assembly: AssemblyMetadataAttribute("ReleaseDate","2022-10-18T00:00:00.0000000-04:00")>]
+[<assembly: AssemblyFileVersionAttribute("0.3.0")>]
+[<assembly: AssemblyInformationalVersionAttribute("0.3.0")>]
 [<assembly: AssemblyMetadataAttribute("ReleaseChannel","release")>]
-[<assembly: AssemblyMetadataAttribute("GitHash","d4d304dbd98d7a1e4e3e7ac86428e19ba5d7f222")>]
+[<assembly: AssemblyMetadataAttribute("GitHash","cf89ab4cc67d188b891824b34548fd7c3af5a3af")>]
 do ()
 
 module internal AssemblyVersionInformation =
     let [<Literal>] AssemblyTitle = "Wraith"
     let [<Literal>] AssemblyProduct = "Wraith"
-    let [<Literal>] AssemblyVersion = "0.2.0"
-    let [<Literal>] AssemblyMetadata_ReleaseDate = "2022-07-07T00:00:00.0000000-04:00"
-    let [<Literal>] AssemblyFileVersion = "0.2.0"
-    let [<Literal>] AssemblyInformationalVersion = "0.2.0"
+    let [<Literal>] AssemblyVersion = "0.3.0"
+    let [<Literal>] AssemblyMetadata_ReleaseDate = "2022-10-18T00:00:00.0000000-04:00"
+    let [<Literal>] AssemblyFileVersion = "0.3.0"
+    let [<Literal>] AssemblyInformationalVersion = "0.3.0"
     let [<Literal>] AssemblyMetadata_ReleaseChannel = "release"
-    let [<Literal>] AssemblyMetadata_GitHash = "d4d304dbd98d7a1e4e3e7ac86428e19ba5d7f222"
+    let [<Literal>] AssemblyMetadata_GitHash = "cf89ab4cc67d188b891824b34548fd7c3af5a3af"
