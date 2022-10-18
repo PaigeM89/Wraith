@@ -246,69 +246,96 @@ module Prompts =
 
 module ListPrompts =
 
-    type PagingConfig = {
-        PageSize : int
-        Page : int
-    } with
-        static member Default = {
-            PageSize = System.Console.WindowHeight
-            Page = 0
-        }
-        member this.NextPage() = { this with Page = this.Page + 1 }
-        member this.PreviousPage() = { this with Page = Math.Min(this.Page - 1, 0) }
+    type PagingType =
+    | SmoothScroll of pageSize: int * minIndex : int * maxIndex : int
+    | JumpScroll of pageSize : int * pageNumber : int
+    with
+      member this.MaxPages optionCount =
+        match this with
+        | SmoothScroll(pageSize, _, _) -> Math.Ceiling((float) optionCount / (float) pageSize) |> (int)
+        | JumpScroll(pageSize, _) -> Math.Ceiling((float) optionCount / (float) pageSize)  |> (int)
 
-    let rec executeListPrompt (pageConfig : PagingConfig) title (options: (string * 'a) list) currentIndex =
-        Console.Clear()
-        let min = pageConfig.Page * pageConfig.PageSize
-        let max = (pageConfig.Page + 1) * pageConfig.PageSize
-        match title with
+      member this.Previous() =
+        match this with
+        | SmoothScroll(size, min, max) ->
+          SmoothScroll(size, Math.Max(min, 0), Math.Max(max - 1, 0))
+        | JumpScroll(size, pageNumber) ->
+          JumpScroll(size, Math.Max(pageNumber - 1, 0))
+
+      member this.Next() =
+        match this with
+        | SmoothScroll(size, min, max) ->
+          SmoothScroll(size, min + 1, max + 1)
+        | JumpScroll(size, pageNumber) ->
+          JumpScroll(size, pageNumber + 1)
+
+      member this.HasPageBefore() =
+        match this with
+        | SmoothScroll(size, min, _) -> min > 0
+        | JumpScroll(_, pageNumber) -> pageNumber > 0
+
+      member this.HasPageAfter optionCount =
+        match this with
+        | SmoothScroll(_, _, max) -> max < optionCount
+        | JumpScroll(size, pageNumber) ->
+          (pageNumber + 1) < (this.MaxPages optionCount)
+
+    // subtract 2 to leave room for the "[...]" if needed
+    let defaultJumpScroll = JumpScroll(System.Console.WindowHeight - 2, 0)
+    let defaultSmoothScroll = SmoothScroll(System.Console.WindowHeight - 2, 0, System.Console.WindowHeight - 2)
+
+    let createJumpScroll pageSize = JumpScroll(pageSize, 0)
+    let createSmoothScroll pageSize = SmoothScroll(pageSize, 0, pageSize)
+
+    let rec executeListPrompt (paging: PagingType) title (options: (string * 'a) list) hoverIndex =
+      Console.Clear()
+
+      let  min, max =
+        match paging with
+        | SmoothScroll(size, min, max) -> 
+          min, max
+        | JumpScroll(size, pageNumber) ->
+          pageNumber * size, (pageNumber+1) * size
+      
+      match title with
         | Some title ->
             Write.writeLine title
         | None -> ()
-        if pageConfig.Page > 0 then Write.writeLine "[...]"
-        options
-        |> List.iteri (fun index (o, _) ->
-            if index >= min && index <= max then
-                if index = currentIndex then
-                    Write.writeLine (" >" + o)
-                else
-                    Write.writeLine ("  " + o)
-        )
-        if pageConfig.Page < (List.length options / pageConfig.PageSize) then Write.writeLine "[...]"
-        let c = Console.ReadKey(true).Key
-        match c with
-        | ConsoleKey.UpArrow ->
-            let nextIndex = if currentIndex - 1 < 0 then 0 else currentIndex - 1
-            let pageConfig = if nextIndex < min then pageConfig.PreviousPage() else pageConfig
-            executeListPrompt pageConfig title options nextIndex
-        | ConsoleKey.DownArrow ->
-            let nextIndex = if currentIndex + 1 >= (List.length options) then currentIndex else currentIndex + 1
-            let pageConfig = if nextIndex > max then pageConfig.NextPage() else pageConfig
-            executeListPrompt pageConfig title options nextIndex
-        // page up & page down don't seem to work? seems to be captured by the terminal instead
-        | ConsoleKey.PageDown ->
-            let nextIndex = Math.Max(currentIndex + pageConfig.PageSize, List.length options)
-            let pageConfig = pageConfig.NextPage()
-            executeListPrompt pageConfig title options nextIndex
-        | ConsoleKey.PageUp ->
-            let nextIndex = Math.Min(currentIndex - pageConfig.PageSize, 0)
-            let pageConfig = pageConfig.PreviousPage()
-            executeListPrompt pageConfig title options nextIndex
-        | ConsoleKey.Enter ->
-            options
-            |> List.item currentIndex
-            |> snd
-        | _ -> executeListPrompt pageConfig title options currentIndex
+      if paging.HasPageBefore() then Write.writeLine "[...]"
+      options
+      |> List.iteri (fun index (o, _) ->
+          if index >= min && index < max then
+              if index = hoverIndex then
+                  Write.writeLine (" >" + o)
+              else
+                  Write.writeLine ("  " + o)
+      )
+      if paging.HasPageAfter (List.length options) then Write.writeLine "[...]"
+      let c = Console.ReadKey(true).Key
+      match c with
+      | ConsoleKey.UpArrow ->
+          let nextIndex = if hoverIndex - 1 < 0 then 0 else hoverIndex - 1
+          let pageConfig = if nextIndex < min then paging.Previous() else paging
+          executeListPrompt pageConfig title options nextIndex
+      | ConsoleKey.DownArrow ->
+          let nextIndex = if hoverIndex + 1 >= (List.length options) then hoverIndex else hoverIndex + 1
+          let pageConfig = if nextIndex >= max then paging.Next() else paging
+          executeListPrompt pageConfig title options nextIndex
+      | ConsoleKey.Enter ->
+          options
+          |> List.item hoverIndex
+          |> snd
+      | _ -> executeListPrompt paging title options hoverIndex
 
     type ListPromptConfig<'a>  = {
         Title : string option
         Options : (string * 'a) list
-        PagingConfig : PagingConfig
+        PagingConfig : PagingType
     } with
         static member Default = {
             Title = None
             Options = List.empty<string * 'a>
-            PagingConfig = PagingConfig.Default
+            PagingConfig = defaultJumpScroll
         }
 
         member this.Execute() =
@@ -322,8 +349,8 @@ module ListPrompts =
         member this.Title(config : ListPromptConfig<'a>, title) = { config with Title = Some title }
         [<CustomOperation("options")>]
         member this.Options(config : ListPromptConfig<'a>, options) = { config with Options = options }
-        [<CustomOperation("page_size")>]
-        member this.PageSize(config: ListPromptConfig<'a>, size) = { config with PagingConfig = { config.PagingConfig with PageSize = size } }
+        [<CustomOperation("paging")>]
+        member this.PageSize(config: ListPromptConfig<'a>, pagingConfig) = { config with PagingConfig = pagingConfig }
 
         member this.Run(config : ListPromptConfig<'a>) = config.Execute()
 
@@ -333,49 +360,47 @@ module ListPrompts =
     | InvalidIndex of index: int
     | UnparsableIndex of input : string
 
-    type ScrollingConfig = {
-        PageSize : int
-        MinIndex : int
-        MaxIndex : int
-    } with
-        static member Default = {
-            PageSize = System.Console.WindowHeight
-            MinIndex = 0
-            MaxIndex = System.Console.WindowHeight
-        }
-        static member FromPageSize ps = {
-            PageSize = ps
-            MinIndex = 0
-            MaxIndex = ps
-        }
-        member this.Advance() = { this with MinIndex = this.MinIndex + 1; MaxIndex = this.MaxIndex + 1 }
-        member this.Backtrack() = { this with MinIndex = Math.Max(0, this.MinIndex - 1); MaxIndex = Math.Max(this.MaxIndex - 1, System.Console.WindowHeight) }
-
-    let rec executeNumberedListPrompt (scrollingConfig : ScrollingConfig) title (options: (string * 'a) list) currentInput  =
+    let rec executeNumberedListPrompt (paging : PagingType) title (options: (string * 'a) list) currentInput  =
         Console.Clear()
         match title with
         | Some title ->
             Write.writeLine title
         | None -> ()
-        if scrollingConfig.MinIndex > 0 then Write.writeLine "[...]"
+        //if scrollingConfig.MinIndex > 0 then Write.writeLine "[...]"
+        if paging.HasPageBefore() then Write.writeLine "[...]"
+        
+        let min, max, isPastFirstPage, isBeforeLastPage =
+          match paging with
+          | SmoothScroll(size, min, max) -> 
+            let isPastFirstPage = min > size
+            let isBeforeLastPage = max < (List.length options - size)
+            min, max, isPastFirstPage, isBeforeLastPage
+          | JumpScroll(size, pageNumber) ->
+            pageNumber * size, pageNumber * size + 1, pageNumber > 0, pageNumber < (List.length options) / size
+
         options
         |> List.iteri (fun index (o, _) ->
-            if index >= scrollingConfig.MinIndex && index <= scrollingConfig.MaxIndex then
+            if index >= min && index <= max then
                 Write.writeLine ($" %i{index}. %s{o}")
         )
-        if scrollingConfig.MaxIndex < (List.length options) then Write.writeLine "[...]"
+        if paging.HasPageAfter (List.length options) then Write.writeLine "[...]"
         Write.write $"Select an option: %s{currentInput}"
         let c = Console.ReadKey(true).Key
+        
+        let padInput =
+          executeNumberedListPrompt paging title options
+
         match c with
         | ConsoleKey.UpArrow ->
-            let scrollingConfig = scrollingConfig.Backtrack()
-            executeNumberedListPrompt scrollingConfig title options currentInput
+            let paging = paging.Previous()//scrollingConfig.Backtrack()
+            executeNumberedListPrompt paging title options currentInput
         | ConsoleKey.DownArrow ->
-            let scrollingConfig = scrollingConfig.Advance()
-            executeNumberedListPrompt scrollingConfig title options currentInput
+            //let scrollingConfig = scrollingConfig.Advance()
+            let paging = paging.Next()
+            executeNumberedListPrompt paging title options currentInput
         | ConsoleKey.Enter ->
             if currentInput = "" then
-                executeNumberedListPrompt scrollingConfig title options currentInput
+                executeNumberedListPrompt paging title options currentInput
             else
                 let targetIndex =
                     match Int32.TryParse currentInput with
@@ -388,53 +413,44 @@ module ListPrompts =
                     | None -> InvalidIndex i |> Error
                 | Error e -> Error e
         | ConsoleKey.D0
-        | ConsoleKey.NumPad0 ->
-            executeNumberedListPrompt scrollingConfig title options (currentInput + "0")
+        | ConsoleKey.NumPad0 -> padInput (currentInput + "0")
         | ConsoleKey.D1
-        | ConsoleKey.NumPad1 ->
-            executeNumberedListPrompt scrollingConfig title options (currentInput + "1")
+        | ConsoleKey.NumPad1 -> padInput (currentInput + "1")
         | ConsoleKey.D2
-        | ConsoleKey.NumPad2 ->
-            executeNumberedListPrompt scrollingConfig title options (currentInput + "2")
+        | ConsoleKey.NumPad2 -> padInput (currentInput + "2")
         | ConsoleKey.D3
-        | ConsoleKey.NumPad3 ->
-            executeNumberedListPrompt scrollingConfig title options (currentInput + "3")
+        | ConsoleKey.NumPad3 -> padInput (currentInput + "3")
         | ConsoleKey.D4
-        | ConsoleKey.NumPad4 ->
-            executeNumberedListPrompt scrollingConfig title options (currentInput + "4")
+        | ConsoleKey.NumPad4 -> padInput (currentInput + "4")
         | ConsoleKey.D5
-        | ConsoleKey.NumPad5 ->
-            executeNumberedListPrompt scrollingConfig title options (currentInput + "5")
+        | ConsoleKey.NumPad5 -> padInput (currentInput + "5")
         | ConsoleKey.D6
-        | ConsoleKey.NumPad6 ->
-            executeNumberedListPrompt scrollingConfig title options (currentInput + "6")
+        | ConsoleKey.NumPad6 -> padInput (currentInput + "6")
         | ConsoleKey.D7
-        | ConsoleKey.NumPad7 ->
-            executeNumberedListPrompt scrollingConfig title options (currentInput + "7")
+        | ConsoleKey.NumPad7 -> padInput (currentInput + "7")
         | ConsoleKey.D8
-        | ConsoleKey.NumPad8 ->
-            executeNumberedListPrompt scrollingConfig title options (currentInput + "8")
+        | ConsoleKey.NumPad8 -> padInput (currentInput + "8")
         | ConsoleKey.D9
-        | ConsoleKey.NumPad9 ->
-            executeNumberedListPrompt scrollingConfig title options (currentInput + "9")
-        | _ -> executeNumberedListPrompt scrollingConfig title options currentInput
+        | ConsoleKey.NumPad9 -> padInput (currentInput + "9")
+        | ConsoleKey.Backspace -> padInput (currentInput.Substring(0, currentInput.Length - 2))
+        | _ -> padInput currentInput
 
     type NumberedListPromptConfig<'a> = {
         Config : ListPromptConfig<'a>
         PromptText : string option
         IsZeroBased : bool
-        ScrollingConfig : ScrollingConfig
+        Paging : PagingType
     } with
         static member Default = {
             Config = ListPromptConfig<'a>.Default
             PromptText = None
             IsZeroBased = true
-            ScrollingConfig = ScrollingConfig.Default
+            Paging = defaultJumpScroll
         }
 
         member this.Execute() =
             let isZeroBased i = if this.IsZeroBased then i else i + 1
-            executeNumberedListPrompt this.ScrollingConfig this.Config.Title this.Config.Options ""
+            executeNumberedListPrompt this.Paging this.Config.Title this.Config.Options ""
 
     type NumberedListPromptBuilder<'a>() =
         member _.Yield _ = NumberedListPromptConfig<'a>.Default
@@ -448,12 +464,14 @@ module ListPrompts =
         member this.IsZeroBased(config) = { config with IsZeroBased = true }
         [<CustomOperation("is_one_based")>]
         member this.IsOneBased(config) = { config with IsZeroBased = false }
-        [<CustomOperation("page_size")>]
-        member this.PageSize(config, pageSize) = { config with ScrollingConfig = ScrollingConfig.FromPageSize pageSize }
+        [<CustomOperation("paging")>]
+        member this.PageSize(config, paging) = { config with Paging = paging }
 
         member this.Run(config: NumberedListPromptConfig<'a>) = config.Execute()
 
     let numberedListPrompter<'a>() = NumberedListPromptBuilder<'a>()
+
+
 
 // todo: can this even be done? I want to make a single CE that can wrap a series of console interactions
 // type ConsoleBuilder() =
