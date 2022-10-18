@@ -96,6 +96,33 @@ module Prompts =
         member this.SetLoopOnEmpty b = { this with LoopOnEmpty = b }
         member this.SetClearOnLoop b = { this with ClearOnLoop = b }
 
+        member this.Execute() =
+          if this.LoopOnEmpty then
+            let rec loop input =
+                match input with
+                | Some input ->
+                    if String.IsNullOrWhiteSpace input then
+                        if this.ClearOnLoop then clear()
+                        match this.OnError with
+                        | Some errMsg ->
+                            Write.writeLine $"{errMsg}\n"
+                            Write.writeLine this.Prompt
+                            Read.readLine() |> Some |> loop
+                        | None ->
+                            Write.writeLine this.Prompt
+                            Read.readLine() |> Some |> loop
+                    else
+                        input
+                | None ->
+                    Write.write this.Prompt
+                    Read.readLine() |> Some |> loop
+            loop None
+          else
+              Write.write this.Prompt
+              Read.readLine()
+
+    let private execute (config: PromptConfig) = config.Execute()
+
     type TextPromptConfig = {
         PromptConfig : PromptConfig
     } with
@@ -107,55 +134,7 @@ module Prompts =
             TextPromptConfig.Default with PromptConfig = PromptConfig.FromPrompt prompt
         }
 
-        member this.Execute() =
-            if this.PromptConfig.LoopOnEmpty then
-                let rec loop input =
-                    match input with
-                    | Some input ->
-                        if String.IsNullOrWhiteSpace input then
-                            if this.PromptConfig.ClearOnLoop then clear()
-                            match this.PromptConfig.OnError with
-                            | Some errMsg ->
-                                Write.writeLine $"{errMsg}\n"
-                                Write.writeLine this.PromptConfig.Prompt
-                                Read.readLine() |> Some |> loop
-                            | None ->
-                                Write.writeLine this.PromptConfig.Prompt
-                                Read.readLine() |> Some |> loop
-                        else
-                            input
-                    | None ->
-                        Write.write this.PromptConfig.Prompt
-                        Read.readLine() |> Some |> loop
-                loop None
-            else
-                Write.write this.PromptConfig.Prompt
-                Read.readLine()
-
-    let private execute (config: PromptConfig) =
-        if config.LoopOnEmpty then
-            let rec loop input =
-                match input with
-                | Some input ->
-                    if String.IsNullOrWhiteSpace input then
-                        if config.ClearOnLoop then clear()
-                        match config.OnError with
-                        | Some errMsg ->
-                            Write.writeLine $"{errMsg}\n"
-                            Write.writeLine config.Prompt
-                            Read.readLine() |> Some |> loop
-                        | None ->
-                            Write.writeLine config.Prompt
-                            Read.readLine() |> Some |> loop
-                    else
-                        input
-                | None ->
-                    Write.write config.Prompt
-                    Read.readLine() |> Some |> loop
-            loop None
-        else
-            Write.write config.Prompt
-            Read.readLine()
+        member this.Execute() = this.PromptConfig.Execute()
 
     type TextPromptBuilder() =
         member _.Yield _ = TextPromptConfig.Default
